@@ -18,21 +18,23 @@ import random
 @url : 漫画的入口
 @return 创建的文件夹的名字
 '''
-def is_exists(url):
+def folders(url):
     o = urlparse(url)
     s = re.match(r'\/comedy\/(.*?)\/(.*?)\/viewer',o.path)
-    folder = unquote(s.group(1))+'/'+unquote(s.group(2))
+    parent_folder = unquote(s.group(1))
+    sub_folder = unquote(s.group(2))
+    return parent_folder,sub_folder
 
-    if not os.path.exists(unquote(s.group(1))):
-        os.mkdir(unquote(s.group(1)))
-
+def is_exists(url):
+    parent_folder,sub_folder = folders(url)
+    folder = parent_folder+'/'+sub_folder
     if not os.path.exists(folder):
         return False,folder
     else:
         return True,'emmm.... 这个文件夹'+unquote(s.group(2))
 
 '''
-@url 这里的url是refer的url
+@url 漫画的入口
 @return 每个图片的实际地址
 '''
 def get_img(url):
@@ -72,11 +74,13 @@ def save_img(referer,folder):
         i+=1
 
 '''
-@url 这里的url参数是refer的url，也是每一页具体的漫画
-@page 这里的page是分页的页码数
-返回每一页具体漫画的地址列表
+@url 漫画的入口
 '''
 def start(url):
+    parent_folder,sub_folder = folders(url)
+    if not os.path.exists(parent_folder):
+        os.mkdir(parent_folder)
+    
     flag,folder = is_exists(url)
     if not flag:
         print('往'+folder+'写入图片..........')
@@ -84,6 +88,7 @@ def start(url):
         save_img(url,folder)
     else:
         print(folder+'已经存在了!!!!!!!!!!!')
+        #num = [x for x in os.listdir(parent_folder) if os.path.isdir(x)]
 
 
 if __name__ == "__main__":
