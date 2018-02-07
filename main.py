@@ -8,6 +8,7 @@ import requests
 from urllib.parse import unquote,urlparse
 import re
 import os
+import os.path
 from bs4 import BeautifulSoup
 requests.packages.urllib3.disable_warnings()
 
@@ -21,7 +22,8 @@ url = 'https://www.dongmanmanhua.cn/comedy/xin-xinlingdeshengyin/list?title_no=3
 def create_dir(url):
     o = urlparse(url)
     s = re.match(r'\/comedy\/xin-xinlingdeshengyin\/(.*?)\/viewer',o.path)
-    os.mkdir(unquote(s.group(1)))
+    if not os.path.exists(s.group(1)):
+        os.mkdir(unquote(s.group(1)))
     return unquote(s.group(1))
 
 # 得到refer的地址，因为一个分页，有好多的refer的地址。所以调用的时候应该用循环，然后返回列表
