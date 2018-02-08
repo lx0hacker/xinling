@@ -18,20 +18,19 @@ import random
 @url : 漫画的入口
 @return 创建的文件夹的名字
 '''
-def folders(url):
+def get_folder(url):
     o = urlparse(url)
     s = re.match(r'\/comedy\/(.*?)\/(.*?)\/viewer',o.path)
-    parent_folder = unquote(s.group(1))
     sub_folder = unquote(s.group(2))
-    return parent_folder,sub_folder
-
-def is_exists(url):
-    parent_folder,sub_folder = folders(url)
-    folder = parent_folder+'/'+sub_folder
+    return sub_folder
+'''
+@folder 要创建的文件夹的名字
+'''
+def is_exists(folder):
     if not os.path.exists(folder):
-        return False,folder
+        return False
     else:
-        return True,'emmm.... 这个文件夹'+unquote(s.group(2))
+        return True
 
 '''
 @url 漫画的入口
@@ -76,32 +75,38 @@ def save_img(referer,folder):
 '''
 @url 漫画的入口
 '''
-def start(url):
-    parent_folder,sub_folder = folders(url)
-    if not os.path.exists(parent_folder):
-        os.mkdir(parent_folder)
-    
-    flag,folder = is_exists(url)
+def start(url,folder):    
+    flag = is_exists(url)
     if not flag:
         print('往'+folder+'写入图片..........')
         os.mkdir(folder)
         save_img(url,folder)
     else:
         print(folder+'已经存在了!!!!!!!!!!!')
-        #num = [x for x in os.listdir(parent_folder) if os.path.isdir(x)]
+        #
 
 
 if __name__ == "__main__":
+    print('如果你存放的目录不一致，将重新下载！！！')    
     url = input('输入第一话漫画的地址: ')
-    num = 1 
+    parent_folder = input('请输入存放漫画的名字: ')
+
+    if not os.path.exists(parent_folder):
+        os.mkdir(parent_folder)
+        
+    os.chdir(parent_folder)
+    num = len([x for x in os.listdir('.') if os.path.isdir(x)])
+
     while True:
         #在这里增加参数从而爬取所有的漫画。注意选取的是跳转的url
+        num+=1
         url = re.sub('episode_no=.*','episode_no='+str(num),url)
         r= requests.get(url)
         url =r.url
+        sub_folder = get_folder(url)
+        
         if r.status_code == 200:
-            start(url)
-            num+=1
+            start(url,sub_folder)
         elif r.status_code ==404:
             print('网页404, 没有更多了......')
             break
