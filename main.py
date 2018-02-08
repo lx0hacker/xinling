@@ -11,42 +11,30 @@ import os
 import os.path
 from bs4 import BeautifulSoup
 requests.packages.urllib3.disable_warnings()
+import time
+import random
 
-url = 'https://www.dongmanmanhua.cn/comedy/xin-xinlingdeshengyin/list?title_no=381&page='
-
-# url is referer url
 '''
-@url : 这里的url是refer的url。也就是每一页具体的漫画
-返回创建的文件夹的名字
+@url : 漫画的入口
+@return 创建的文件夹的名字
 '''
-def create_dir(url):
+def get_folder(url):
     o = urlparse(url)
-    s = re.match(r'\/comedy\/xin-xinlingdeshengyin\/(.*?)\/viewer',o.path)
-    if not os.path.exists(s.group(1)):
-        os.mkdir(unquote(s.group(1)))
-    return unquote(s.group(1))
-
-# 得到refer的地址，因为一个分页，有好多的refer的地址。所以调用的时候应该用循环，然后返回列表
+    s = re.match(r'\/comedy\/(.*?)\/(.*?)\/viewer',o.path)
+    sub_folder = unquote(s.group(2))
+    return sub_folder
 '''
-@url 这里的url参数是refer的url，也是每一页具体的漫画
-@page 这里的page是分页的页码数
-返回每一页具体漫画的地址列表
+@folder 要创建的文件夹的名字
 '''
-def get_referer_address(url,page):
-    referers = []
-    r = requests.get(url+str(page),verify=False)
-    soup = BeautifulSoup(r.text,'html.parser')
-    ul = soup.find(id='_listUl')
-    all_li = ul.find_all('li')
-    for li in all_li:
-        referer_url = 'https:'+li.find('a').get('href')
-        referers.append(referer_url)
-
-    return referers
+def is_exists(folder):
+    if not os.path.exists(folder):
+        return False
+    else:
+        return True
 
 '''
-@url 这里的url是refer的url
-@返回每个图片的实际地址
+@url 漫画的入口
+@return 每个图片的实际地址
 '''
 def get_img(url):
     data_url = []
@@ -54,30 +42,80 @@ def get_img(url):
     soup = BeautifulSoup(r.text,"html.parser")
     img_list = soup.find(id='_imageList').find_all('img')
     for img in img_list:
-        print(img.get('data-url'))
         data_url.append(img.get('data-url'))
     return data_url
 
 '''
-@referers 指的是一个分页里面的每个漫画的url
+@referer 漫画的入口
+@folder 存储的文件夹
 '''
-def save_img(referers):
-    for referer in referers:
-        headers = {
-            "Referer":referer
-        }
-        folder = create_dir(referer)
-        data_url = get_img(referer)
-        i=0
-        for img_url in data_url:
-            r =requests.get(img_url,headers=headers,verify=False)
-            with open(folder+'/'+str(i)+'.jpg','wb')as f:
-                f.write(r.content)
-            i+=1
+def save_img(referer,folder):
+    headers = {
+        "Referer":referer
+    }
+    data_url = get_img(referer)
+    i=0
+    for img_url in data_url:
+        time.sleep(random.uniform(0.1,0.8))
+        r =requests.get(img_url,headers=headers,verify=False)
+        if r.status_code != 200:
+            print('估计网络出现问题。status code : {}'.format(r.status_code))
+            print('先暂停5秒')
+            time.sleep(5)
+            r = requests.get(img_url,headers=headers,verify=False)
+            if r.status_code !=200:
+                print("error! status code :{}".format(r.status_code))
+                return 
+
+        print('正在爬取漫画里面每个图片的地址.........')
+        with open(folder+'/'+str(i)+'.jpg','wb')as f:
+            f.write(r.content)
+        i+=1
+
+'''
+@url 漫画的入口
+'''
+def start(url,folder):    
+    flag = is_exists(url)
+    if not flag:
+        print('往'+folder+'写入图片..........')
+        os.mkdir(folder)
+        save_img(url,folder)
+    else:
+        print(folder+'已经存在了!!!!!!!!!!!')
+        #
+
 
 if __name__ == "__main__":
-    for num in range(1,23):
-        referers = get_referer_address(url,num)
-        save_img(referers)
+    print('如果你存放的目录不一致，将重新下载！！！')    
+    url = input('输入第一话漫画的地址: ')
+    parent_folder = input('请输入存放漫画的名字: ')
+
+    if not os.path.exists(parent_folder):
+        os.mkdir(parent_folder)
+        
+    os.chdir(parent_folder)
+    num = len([x for x in os.listdir('.') if os.path.isdir(x)])
+
+    while True:
+        #在这里增加参数从而爬取所有的漫画。注意选取的是跳转的url
+        num+=1
+        url = re.sub('episode_no=.*','episode_no='+str(num),url)
+        r= requests.get(url)
+        url =r.url
+        sub_folder = get_folder(url)
+        
+        if r.status_code == 200:
+            start(url,sub_folder)
+        elif r.status_code ==404:
+            print('网页404, 没有更多了......')
+            break
+        else:
+            print('网络出错了: %s'%status_code)
+            break
+
+        
+        
+        
 
 
